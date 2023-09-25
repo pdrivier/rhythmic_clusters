@@ -60,9 +60,8 @@ for r =1:length(list_of_rats)
     %accross multiple sessions
     unique_sessions = unique([subrat{:,2}]);
 
-    %START_HERE NEXT WORK SESSION: here is where you will need to determine 
-    %if not just the wirenum, but the wirenum + wireletter combination is 
-    %present across days! 
+    %here is where you will need to determine if not just the wirenum, but 
+    %the wirenum + wireletter combination is present across days! 
     wirenumletter = [];
     for i = 1:size(subrat,1)
         if subrat{i,3} < 10
@@ -101,8 +100,7 @@ for r =1:length(list_of_rats)
         
         %filter the cell array by wire letter coombination
         subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
-        
-
+      
         %then find the difference between the session days
         days_distance = diff([subwire{:,2}]);
 
@@ -115,6 +113,18 @@ for r =1:length(list_of_rats)
 
             pair1 = danger_inds(d);
             pair2 = danger_inds(d) + 1;
+
+            %START HERE next work session: it's not clear that this code
+            %works also for more than 2 consecutive days (e.g. a scenario
+            %may arise where the offending wire number combination has been
+            %recorded four days in a row--the current code doesn't account
+            %for this, but it needs to! Another issue with the code is that
+            %the last six cells in the dataset don't have a firing rate
+            %attached to them--perhaps it's worth going back to take care
+            %of this first in another snippet of code that searches out the
+            %corresponding file in Rat struct? remember, these wouldn't be
+            %saved in the 'frate' subfield of the Rat struct because I cut
+            %them later!
 
             %select the first and second days of the offending pair from
             %the cell array and select only the index corresponding to the
