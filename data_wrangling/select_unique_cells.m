@@ -83,9 +83,9 @@ for r =1:length(list_of_rats)
         
         %find the number of perfect matches in subrat
         wirenum_matches = regexp(subrat(:,6),wirenumletter_expression,'match');
-        n_tet_appearances = numel(find(~cellfun(@isempty,wirenum_matches)));
+        n_appearances = numel(find(~cellfun(@isempty,wirenum_matches)));
 
-        if n_tet_appearances > 1
+        if n_appearances > 1
         %if the tetrode has been included more than once, you'll have to
         %figure out if this happened over the course of consecutive days
         %as a rough ball park, more than 10 days distance will be considered
@@ -99,14 +99,16 @@ for r =1:length(list_of_rats)
         %depending on the quality of the tops and the precision of the
         %turn, as well as fractional tissue movement (settling)
         
-        %filter the cell array by tetrode
-        subwire = subrat([subrat{:,3}] == wire,:);
+        %filter the cell array by wire letter coombination
+        subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+        
 
         %then find the difference between the session days
         days_distance = diff([subwire{:,2}]);
 
         %grab the indices corresponding to any pair of days that is under
-        %the minimum threshold of days specified
+        %the minimum threshold of days specified; remember these will be
+        %indeces for subwire cell array
         danger_inds = find(days_distance < min_accept_distance);
 
         for d = 1:length(danger_inds)
@@ -118,8 +120,8 @@ for r =1:length(list_of_rats)
             %the cell array and select only the index corresponding to the
             %highest firing rate
             consider = subwire([pair1,pair2],:);
-            ind_highest_fr = find(max(consider{:,5}));
-            tmp_cell_array = [tmp_cell_array; subwire(ind_highest_fr,:)] ; 
+            ind_highest_fr = find([consider{:,5}]==max(consider{:,5}));
+            tmp_cell_array = [tmp_cell_array; subwire(ind_highest_fr,:)]; 
 
         end
 
