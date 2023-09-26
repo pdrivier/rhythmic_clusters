@@ -109,6 +109,7 @@ for r =1:length(list_of_rats)
         %indeces for subwire cell array
         danger_inds = find(days_distance < min_accept_distance);
 
+        update_danger_inds = danger_inds;
         for d = 1:length(danger_inds)
 
             pair1 = danger_inds(d);
@@ -118,7 +119,11 @@ for r =1:length(list_of_rats)
             %works also for more than 2 consecutive days (e.g. a scenario
             %may arise where the offending wire number combination has been
             %recorded four days in a row--the current code doesn't account
-            %for this, but it needs to! Another issue with the code is that
+            %for this, but it needs to! new edits are drafty--the while
+            %loop still doesn't work, and i am wondering how to change
+            %the danger_inds variable on each iteration of the for loop
+            %such that maybe I wouldn't even need the danger_count var
+            %Another issue with the code is that
             %the last six cells in the dataset don't have a firing rate
             %attached to them--perhaps it's worth going back to take care
             %of this first in another snippet of code that searches out the
@@ -131,9 +136,18 @@ for r =1:length(list_of_rats)
             %highest firing rate
             consider = subwire([pair1,pair2],:);
             ind_highest_fr = find([consider{:,5}]==max(consider{:,5}));
-            tmp_cell_array = [tmp_cell_array; subwire(ind_highest_fr,:)]; 
+            ind_rm = find([consider{:,5}]==min(consider{:,5}));
+
+            update_danger_inds(ind_rm) = []; %doesnt work because always 
+                                             %adjudicating between ind 1 &
+                                             %2 but this doesn't account
+                                             %for the larger set of indices
+                                             %in update_danger_inds
 
         end
+
+        tmp_cell_array = [tmp_cell_array; subwire(ind_highest_fr,:)];
+        
 
         end
 
