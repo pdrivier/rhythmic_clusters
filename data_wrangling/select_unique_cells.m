@@ -18,6 +18,15 @@ function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,d
 %min_accept_distance,   scalar, minimum number of days between recordings 
 %                       of the same tetrode that we are willing to accept
 
+%TODO - START HERE next work session
+            %Another issue with the code is that
+            %the last six cells in the dataset don't have a firing rate
+            %attached to them--perhaps it's worth going back to take care
+            %of this first in another snippet of code that searches out the
+            %corresponding file in Rat struct? remember, these wouldn't be
+            %saved in the 'frate' subfield of the Rat struct because I cut
+            %them later!
+            
 %first get the list of all unique rats
 for n = 1:length(list_to_select_from)
     
@@ -84,109 +93,92 @@ for r =1:length(list_of_rats)
         wirenum_matches = regexp(subrat(:,6),wirenumletter_expression,'match');
         n_appearances = numel(find(~cellfun(@isempty,wirenum_matches)));
 
-        if n_appearances > 1
-        %if the tetrode has been included more than once, you'll have to
-        %figure out if this happened over the course of consecutive days
-        %as a rough ball park, more than 10 days distance will be considered
-        %un-consecutive; the min_accept_distance can be varied depending on
-        %priors over a specific region, or cell type, or known size of turns
-        %(e.g. don't expect to be able to record from the same granule cell
-        %after a 35 um turn across days, but yes an interneuron)
+        if n_appearances == 1
 
-        %side note: the best way to do this would actually be to do it by 
-        %tetrode turning distance (although even this is not always accurate
-        %depending on the quality of the tops and the precision of the
-        %turn, as well as fractional tissue movement (settling)
+            subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+            tmp_cell_array = [tmp_cell_array; subwire];
+
+        elseif n_appearances > 1 & n_appearances <=2
+            %if there are only two options, check for the number of days between 
+            %recordings, and grab both if they exceed the minimum acceptable
+            %distance, or grab only the highest frate one if fewer days than
+            %the acceptable minimum distance
+            subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+    
+            %find the difference between the session days
+            days_distance = diff([subwire{:,2}]);
         
-        %filter the cell array by wire letter coombination
-        subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+            if days_distance > min_accept_distance
 
-        %determine if there are large fluctuations in firing rate over time
-        %the idea is that the same tetrode could, in principle, have
-        %recorded two different interneurons over a long turn span, and
-        %this might show up as a gradual decrease in the firing rate of the
-        %first interneuron followed by a gradual increase of the second
-        %interneuron. It's always possible the tetrode somehow moved up
-        %again and re-recorded the same interneuron, but it is unlikely
-        %that the interneuron would have remained so healthy, is the
-        %assumption
-        frate_list = [subwire{:,5}];
-        mean_frate = mean(frate_list);
-        mean_sq_diffs = (frate_list - mean_frate).^2/length(frate_list);
-        [pks,locs] = findpeaks(mean_sq_diffs);
-        
-        if length(pks) == 1 
-           
-            %there might be two interneurons so:
-            %split the subwire data in two, at the locs index location
-            put_nrn1_frates = [subwire{1:locs,5}];
-            put_nrn2_frates = [subwire{locs+1:end,5}];
+                tmp_cell_array = [tmp_cell_array;subwire];
 
-            highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
-            tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
+            else
 
+                frate_list = [subwire{:,5}];
+                highest_fr_recording =  subwire(frate_list == max(frate_list),:);
+                tmp_cell_array = [tmp_cell_array; highest_fr_recording];
 
-            highest_fr_recording2 = subwire(locs+find(put_nrn2_frates == max(put_nrn2_frates)),:);
-            tmp_cell_array = [tmp_cell_array; highest_fr_recording2];
+            end
 
-        else
-
+        elseif n_appearances > 2
+            %if the tetrode has been included more than once, you'll have to
+            %figure out if this happened over the course of consecutive days
+            %as a rough ball park, more than 10 days distance will be considered
+            %un-consecutive; the min_accept_distance can be varied depending on
+            %priors over a specific region, or cell type, or known size of turns
+            %(e.g. don't expect to be able to record from the same granule cell
+            %after a 35 um turn across days, but yes an interneuron)
+    
+            %side note: the best way to do this would actually be to do it by 
+            %tetrode turning distance (although even this is not always accurate
+            %depending on the quality of the tops and the precision of the
+            %turn, as well as fractional tissue movement (settling)
             
-            highest_fr_recording = subwire(frate_list == max(frate_list),:);
-            tmp_cell_array = [tmp_cell_array; highest_fr_recording];
+            %filter the cell array by wire letter coombination
+            subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+
+            %determine if there are large fluctuations in firing rate over time
+            %the idea is that the same tetrode could, in principle, have
+            %recorded two different interneurons over a long turn span, and
+            %this might show up as a gradual decrease in the firing rate of the
+            %first interneuron followed by a gradual increase of the second
+            %interneuron. It's always possible the tetrode somehow moved up
+            %again and re-recorded the same interneuron, but it is unlikely
+            %that the interneuron would have remained so healthy, is the
+            %assumption
+            frate_list = [subwire{:,5}];
+            mean_frate = mean(frate_list);
+            mean_sq_diffs = (frate_list - mean_frate).^2/length(frate_list);
+            [pks,locs] = findpeaks(mean_sq_diffs);
+            
+            if length(pks) == 1 
+               
+                %there might be two interneurons so:
+                %split the subwire data in two, at the locs index location
+                put_nrn1_frates = [subwire{1:locs,5}];
+                put_nrn2_frates = [subwire{locs+1:end,5}];
+    
+                highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
+                tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
+    
+    
+                highest_fr_recording2 = subwire(locs+find(put_nrn2_frates == max(put_nrn2_frates)),:);
+                tmp_cell_array = [tmp_cell_array; highest_fr_recording2];
+    
+            else
+                %if there are a ton of local peaks, this might be an
+                %indication of firing rate variations that correspond to a 
+                %single neuron being recorded on super noisy days sometimes
+                %and great, low-noise days other times, so just grab the
+                %highest firing rate day.
+                highest_fr_recording = subwire(frate_list == max(frate_list),:);
+                tmp_cell_array = [tmp_cell_array; highest_fr_recording];
+    
+    
+            end
 
 
-        end
-
-
-      
-        %then find the difference between the session days
-        days_distance = diff([subwire{:,2}]);
-
-        %grab the indices corresponding to any pair of days that is under
-        %the minimum threshold of days specified; remember these will be
-        %indeces for subwire cell array
-        danger_inds = find(days_distance < min_accept_distance);
-
-        update_danger_inds = danger_inds;
-        for d = 1:length(danger_inds)
-
-            pair1 = danger_inds(d);
-            pair2 = danger_inds(d) + 1;
-
-            %START HERE next work session: it's not clear that this code
-            %works also for more than 2 consecutive days (e.g. a scenario
-            %may arise where the offending wire number combination has been
-            %recorded four days in a row--the current code doesn't account
-            %for this, but it needs to! new edits are drafty--the while
-            %loop still doesn't work, and i am wondering how to change
-            %the danger_inds variable on each iteration of the for loop
-            %such that maybe I wouldn't even need the danger_count var
-            %Another issue with the code is that
-            %the last six cells in the dataset don't have a firing rate
-            %attached to them--perhaps it's worth going back to take care
-            %of this first in another snippet of code that searches out the
-            %corresponding file in Rat struct? remember, these wouldn't be
-            %saved in the 'frate' subfield of the Rat struct because I cut
-            %them later!
-
-            %select the first and second days of the offending pair from
-            %the cell array and select only the index corresponding to the
-            %highest firing rate
-            consider = subwire([pair1,pair2],:);
-            ind_highest_fr = find([consider{:,5}]==max(consider{:,5}));
-            ind_rm = find([consider{:,5}]==min(consider{:,5}));
-
-            update_danger_inds(ind_rm) = []; %doesnt work because always 
-                                             %adjudicating between ind 1 &
-                                             %2 but this doesn't account
-                                             %for the larger set of indices
-                                             %in update_danger_inds
-
-        end
-
-        tmp_cell_array = [tmp_cell_array; subwire(ind_highest_fr,:)];
-        
+        end        
 
         end
 
