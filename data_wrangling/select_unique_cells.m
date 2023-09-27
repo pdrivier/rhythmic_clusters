@@ -26,7 +26,7 @@ function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,d
             %corresponding file in Rat struct? remember, these wouldn't be
             %saved in the 'frate' subfield of the Rat struct because I cut
             %them later!
-            
+
 %first get the list of all unique rats
 for n = 1:length(list_to_select_from)
     
@@ -98,7 +98,7 @@ for r =1:length(list_of_rats)
             subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
             tmp_cell_array = [tmp_cell_array; subwire];
 
-        elseif n_appearances > 1 & n_appearances <=2
+        elseif n_appearances == 2 
             %if there are only two options, check for the number of days between 
             %recordings, and grab both if they exceed the minimum acceptable
             %distance, or grab only the highest frate one if fewer days than
@@ -157,13 +157,32 @@ for r =1:length(list_of_rats)
                 %split the subwire data in two, at the locs index location
                 put_nrn1_frates = [subwire{1:locs,5}];
                 put_nrn2_frates = [subwire{locs+1:end,5}];
+
+                if length(put_nrn1_frates) >= 2 && length(put_nrn2_frates) >= 2
     
-                highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
-                tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
-    
-    
-                highest_fr_recording2 = subwire(locs+find(put_nrn2_frates == max(put_nrn2_frates)),:);
-                tmp_cell_array = [tmp_cell_array; highest_fr_recording2];
+                    highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
+                    tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
+        
+        
+                    highest_fr_recording2 = subwire(locs+find(put_nrn2_frates == max(put_nrn2_frates)),:);
+                    tmp_cell_array = [tmp_cell_array; highest_fr_recording2];
+
+                else
+                    %if else is true, then the identified local peak is only 
+                    %likely separating something like the following frate
+                    %list = [30 31 29 10 13] -- where the smallest
+                    %identified value (the output of local peak finding) is
+                    %at 10, and it doesn't seem meaningful to have later
+                    %increased to 13 Hz (e.g. still likely the same neuron
+                    %in the process of being lost by the tetrode, with some
+                    %variation in recording noise or true spiking)
+
+                    %so just grab the highest firing rate recording
+                    highest_fr_recording =  subwire(frate_list == max(frate_list),:);
+                    tmp_cell_array = [tmp_cell_array; highest_fr_recording];
+
+
+                end
     
             else
                 %if there are a ton of local peaks, this might be an
@@ -176,21 +195,18 @@ for r =1:length(list_of_rats)
     
     
             end
-
-
-        end        
-
         end
 
     end
 
-    
-   
 end
+
+
+   
+
 %remember to clean the cell array back up--second column needs to have the
 %'D' added to whatever the session number is, and the third column needs to
 %have the 'TETSPK' appended to the first **wire** number and re-append the
 %letter to the end of it
 
 
-end
