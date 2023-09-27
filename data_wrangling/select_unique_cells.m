@@ -100,6 +100,45 @@ for r =1:length(list_of_rats)
         
         %filter the cell array by wire letter coombination
         subwire = subrat(find(~cellfun(@isempty,wirenum_matches)),:);
+
+        %determine if there are large fluctuations in firing rate over time
+        %the idea is that the same tetrode could, in principle, have
+        %recorded two different interneurons over a long turn span, and
+        %this might show up as a gradual decrease in the firing rate of the
+        %first interneuron followed by a gradual increase of the second
+        %interneuron. It's always possible the tetrode somehow moved up
+        %again and re-recorded the same interneuron, but it is unlikely
+        %that the interneuron would have remained so healthy, is the
+        %assumption
+        frate_list = [subwire{:,5}];
+        mean_frate = mean(frate_list);
+        mean_sq_diffs = (frate_list - mean_frate).^2/length(frate_list);
+        [pks,locs] = findpeaks(mean_sq_diffs);
+        
+        if length(pks) == 1 
+           
+            %there might be two interneurons so:
+            %split the subwire data in two, at the locs index location
+            put_nrn1_frates = [subwire{1:locs,5}];
+            put_nrn2_frates = [subwire{locs+1:end,5}];
+
+            highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
+            tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
+
+
+            highest_fr_recording2 = subwire(locs+find(put_nrn2_frates == max(put_nrn2_frates)),:);
+            tmp_cell_array = [tmp_cell_array; highest_fr_recording2];
+
+        else
+
+            
+            highest_fr_recording = subwire(frate_list == max(frate_list),:);
+            tmp_cell_array = [tmp_cell_array; highest_fr_recording];
+
+
+        end
+
+
       
         %then find the difference between the session days
         days_distance = diff([subwire{:,2}]);
