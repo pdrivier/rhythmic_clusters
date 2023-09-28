@@ -27,6 +27,12 @@ function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,d
             %saved in the 'frate' subfield of the Rat struct because I cut
             %them later!
 
+            %Another issue is that sometimes, especially for LH16, the same
+            %cell could have been spike sorted as a different unit letter,
+            %just because he had so many pyramidal cells that the cutting
+            %order for the interneuron would have changed, so need to do a
+            %second pass to catch and pluck those out!
+
 %first get the list of all unique rats
 for n = 1:length(list_to_select_from)
     
@@ -158,7 +164,7 @@ for r =1:length(list_of_rats)
                 put_nrn1_frates = [subwire{1:locs,5}];
                 put_nrn2_frates = [subwire{locs+1:end,5}];
 
-                if length(put_nrn1_frates) >= 2 && length(put_nrn2_frates) >= 2
+                if length(put_nrn1_frates) > 2 && length(put_nrn2_frates) > 2
     
                     highest_fr_recording1 = subwire(put_nrn1_frates == max(put_nrn1_frates),:);
                     tmp_cell_array = [tmp_cell_array; highest_fr_recording1];
@@ -199,12 +205,17 @@ for r =1:length(list_of_rats)
 
     end
 
+    unique_ish_cells = tmp_cell_array;
+
+    %here, do a second pass to trim out units that might be repeats but
+    %were, for cluster cutting reasons, assigned a slightly different unit
+    %letter even though they were cut on the same tetrode.
+
+    
+
 end
 
-
-   
-
-%remember to clean the cell array back up--second column needs to have the
+%TODO: remember to clean the cell array back up--second column needs to have the
 %'D' added to whatever the session number is, and the third column needs to
 %have the 'TETSPK' appended to the first **wire** number and re-append the
 %letter to the end of it
