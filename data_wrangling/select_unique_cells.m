@@ -204,15 +204,146 @@ for r =1:length(list_of_rats)
         end
 
     end
+    
+end
 
-    unique_ish_cells = tmp_cell_array;
+unique_ish_cells = tmp_cell_array;
 
     %here, do a second pass to trim out units that might be repeats but
     %were, for cluster cutting reasons, assigned a slightly different unit
     %letter even though they were cut on the same tetrode.
 
-    
+    %since this is the second pass, we will reset the minimum acceptable
+    %distance of days, assuming our first pass was quite rigorous--this
+    %time around, we will be looking wire by wire (not wire-unit
+    %combinations), so there may have been enough days between recordings
+    %for a wire-unit combo, but a different wire-unit may have been
+    %selected in between those other two units' days and would throw off
+    %our estimate of days_distance between recordings. 
+    % e.g. 
+    %{'LH9'}    {[ 4]}    {[13]}    {'a'}    {[45.5565]}    {'13a'}
+    %{'LH9'}    {[ 8]}    {[13]}    {'b'}    {[42.2210]}    {'13b'}
+    %{'LH9'}    {[15]}    {[13]}    {'a'}    {[38.7408]}    {'13a'}
 
+    %LH9's 13a and 13b often appear simultaneously in recordings across
+    %multiple days, but we would have chosen only the highest firing rate
+    %version of each of them, so it feels too conservative to drop 2/3 of
+    %these, and we would have kept 13a on D4 and 13a on D15 because these
+    %days are actually beyond the 10-day minimum acceptable distance. 
+
+    min_accept_distance = 3;
+
+    %first, check for cells recorded on the same tetrode, on the same
+    %day--these are likely unique neurons (unless they were artificially
+    %separated, but we can't fix that at this stage). 
+
+cleaner_tmp_array = [];
+for r = 1:length(list_of_rats)
+
+    rat = list_of_rats{r};
+    keep_ind = regexp(unique_ish_cells(:,1),rat,'match');
+    keep_ind = find(~cellfun(@isempty,keep_ind));
+
+    %filter the cell array for just the rows for this rat
+    subrat = unique_ish_cells(keep_ind,:);
+
+    unique_wires = unique([subrat{:,3}]);
+
+    %filter the data frame for the unique wires 
+   
+    for w = 1:length(unique_wires)
+        wirenum = unique_wires(:,w);
+        
+        %find the number of perfect matches in subrat
+        subwire = subrat([subrat{:,3}] == wirenum, :);
+        subwire = sortrows(subwire,2);
+        n_appearances = size(subwire,1);
+
+        days_distance = diff([subwire{:,2}]); %need to keep recordings 
+                                              %of different units made
+                                              %on the same day! (e.g. == 0)
+        
+        if n_appearances >= 3
+        
+            if all(days_distance < min_accept_distance) 
+                %if all the day distances are too short, just grab the
+                %highest firing rate recording for the tetrode, to be
+                %maximally conservative, since the unit character change
+                %might only reflect a different number of pyramidal cells
+                %co-recorded on the tetrode, such that the interneuron was
+                %cut as a different unit character on different days
+                frate_list = [subwire{:,5}];
+                highest_fr_recording =  subwire(frate_list == max(frate_list),:);
+                cleaner_tmp_array = [cleaner_tmp_array;highest_fr_recording];
+
+            elseif any(days_distance > min_accept_distance)
+                %if any of the day distances is acceptable, find which
+                %one(s) it(they) are and keep the earliest day's index for
+                %sure, and then you'll have to see if the index+1 has any
+                %other distances from other recording days to consider
+
+                keep_ind = find(days_distance > min_accept_distance) ;
+                
+                if days_distance(end) > min_accept_distance
+                    %if the last index in days_distance is greater than the
+                    %minimum acceptable distance, also add the last index
+                    %of subwire into keep_ind, because the first keep_ind
+                    %specification will only keep the next-to-last index in
+                    %subwire
+                    keep_ind = [keep_ind, keep_ind(end)+1];
+                end
+
+                if any(days_distance == 0)
+                    zero_inds = find(days_distance == 0) + 1;%grab the last
+                                                             %session with
+                                                             %units on the
+                                                             %same wire,
+                                                             %same day
+                    keep_ind = [keep_ind; zero_inds];
+
+                end
+                
+                cleaner_tmp_array = [cleaner_tmp_array;subwire(keep_ind,:)];
+
+                other_inds = find(days_distance < min_accept_distance);%this
+                                                            %also catches
+                                                            %any zero-index
+                                                            %ones
+
+                new_subwire = subwire(other_inds,:);
+                %and from this one, just grab the highest firing rate
+                %recording!
+                frate_list = [new_subwire{:,5}];
+                highest_fr_recording = new_subwire(frate_list == max(frate_list),:);
+                cleaner_tmp_array = [cleaner_tmp_array; highest_fr_recording];
+
+            elseif n_appearances == 2
+
+                if (days_distance < min_accept_distance) & (days_distance > 0)
+
+                    frate_list = [subwire{:,5}];
+                    highest_fr_recording = subwire(frate_list == max(frate_list),:);
+                    cleaner_tmp_array = [cleaner_tmp_array; highest_fr_recording];
+
+                else
+
+                    cleaner_tmp_array = [cleaner_tmp_array; subwire];
+
+                end
+
+            else
+
+                cleaner_tmp_array = [cleaner_tmp_array;subwire];
+
+            end
+
+        else
+
+            cleaner_tmp_array = [cleaner_tmp_array;subwire];
+
+        end
+
+    end
 end
 
 %TODO: remember to clean the cell array back up--second column needs to have the
