@@ -231,7 +231,7 @@ unique_ish_cells = tmp_cell_array;
     %these, and we would have kept 13a on D4 and 13a on D15 because these
     %days are actually beyond the 10-day minimum acceptable distance. 
 
-    min_accept_distance = 10;
+    min_accept_distance = 5;
 
     %first, check for cells recorded on the same tetrode, on the same
     %day--these are likely unique neurons (unless they were artificially
