@@ -262,7 +262,6 @@ for r = 1:length(list_of_rats)
         days_distance = diff([subwire{:,2}]); %need to keep recordings 
                                               %of different units made
                                               %on the same day! (e.g. == 0)
-        
         if n_appearances >= 3
         
             if all(days_distance < min_accept_distance) 
@@ -317,34 +316,33 @@ for r = 1:length(list_of_rats)
                 highest_fr_recording = new_subwire(frate_list == max(frate_list),:);
                 cleaner_tmp_array = [cleaner_tmp_array; highest_fr_recording];
 
-            elseif n_appearances == 2
+            end
 
-                if (days_distance < min_accept_distance) & (days_distance > 0)
+        elseif n_appearances == 2
 
-                    frate_list = [subwire{:,5}];
-                    highest_fr_recording = subwire(frate_list == max(frate_list),:);
-                    cleaner_tmp_array = [cleaner_tmp_array; highest_fr_recording];
-
-                else
-
-                    cleaner_tmp_array = [cleaner_tmp_array; subwire];
-
-                end
-
+            if (days_distance < min_accept_distance) & (days_distance > 0)
+    
+                frate_list = [subwire{:,5}];
+                highest_fr_recording = subwire(frate_list == max(frate_list),:);
+                cleaner_tmp_array = [cleaner_tmp_array; highest_fr_recording];
+    
             else
-
-                cleaner_tmp_array = [cleaner_tmp_array;subwire];
-
+    
+                cleaner_tmp_array = [cleaner_tmp_array; subwire];
+    
             end
 
         else
-
+    
             cleaner_tmp_array = [cleaner_tmp_array;subwire];
-
+    
+            
+    
         end
 
     end
 end
+
 
 %now, clean the cell array back up--second column needs to have the
 %'D' added to whatever the session number is, and the third column needs to
