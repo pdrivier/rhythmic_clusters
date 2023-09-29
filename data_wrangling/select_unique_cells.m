@@ -231,7 +231,7 @@ unique_ish_cells = tmp_cell_array;
     %these, and we would have kept 13a on D4 and 13a on D15 because these
     %days are actually beyond the 10-day minimum acceptable distance. 
 
-    min_accept_distance = 3;
+    min_accept_distance = 10;
 
     %first, check for cells recorded on the same tetrode, on the same
     %day--these are likely unique neurons (unless they were artificially
@@ -299,7 +299,7 @@ for r = 1:length(list_of_rats)
                                                              %units on the
                                                              %same wire,
                                                              %same day
-                    keep_ind = [keep_ind; zero_inds];
+                    keep_ind = [keep_ind, zero_inds];
 
                 end
                 
@@ -346,9 +346,24 @@ for r = 1:length(list_of_rats)
     end
 end
 
-%TODO: remember to clean the cell array back up--second column needs to have the
+%now, clean the cell array back up--second column needs to have the
 %'D' added to whatever the session number is, and the third column needs to
 %have the 'TETSPK' appended to the first **wire** number and re-append the
 %letter to the end of it
+
+cleaner_tmp_array = sortrows(cleaner_tmp_array,[1,2]);
+for i = 1:length(cleaner_tmp_array)
+
+    unique_cells{i,1} = [cleaner_tmp_array{i,1},'D',num2str(cleaner_tmp_array{i,2})];
+
+    if cleaner_tmp_array{i,3} < 10
+        unique_cells{i,2} = ['TETSPK0',num2str(cleaner_tmp_array{i,3}),cleaner_tmp_array{i,4}];
+    else
+        unique_cells{i,2} = ['TETSPK',num2str(cleaner_tmp_array{i,3}),cleaner_tmp_array{i,4}];
+    end
+
+    unique_cells{i,3} = cleaner_tmp_array{i,5};
+
+end
 
 
