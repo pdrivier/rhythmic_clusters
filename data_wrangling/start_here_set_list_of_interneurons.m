@@ -1,4 +1,4 @@
-%start_here_set_list_of_interneurons
+%start_here_set_your_data_up
 
 %First you'll need to make a list of interneurons you will analyze.
 %Although challenging to establish without a shadow of a doubt,
@@ -21,7 +21,9 @@
 %were recorded for that neuron--we don't expect the tissue we've turned
 %away from to be healthy like that, though it's of course possible. 
 
-%We'll first load the original list of interneuron identities
+% -------------------------------------------------------------------------
+%We'll first load the original list of interneuron identities--------------
+% -------------------------------------------------------------------------
 load('Int_Identities_Automaze.mat')
 
 list_to_select_from = Int_Identities;
@@ -32,3 +34,9 @@ min_accept_distance = 10;
 unique_cells = select_unique_cells(list_to_select_from,delimratsess,delimtetunit,min_accept_distance);
 clearvars -except unique_cells
 save('unique_ints_by_daytetfrate.mat','unique_cells') %save your output!
+
+% -------------------------------------------------------------------------
+%now, run the script that makes your odor sampling intervals
+% -------------------------------------------------------------------------
+start_here_make_intervals_odorsamp
+
