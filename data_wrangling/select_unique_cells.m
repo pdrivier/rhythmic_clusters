@@ -18,20 +18,6 @@ function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,d
 %min_accept_distance,   scalar, minimum number of days between recordings 
 %                       of the same tetrode that we are willing to accept
 
-%TODO - START HERE next work session
-            %Another issue with the code is that
-            %the last six cells in the dataset don't have a firing rate
-            %attached to them--perhaps it's worth going back to take care
-            %of this first in another snippet of code that searches out the
-            %corresponding file in Rat struct? remember, these wouldn't be
-            %saved in the 'frate' subfield of the Rat struct because I cut
-            %them later!
-
-            %Another issue is that sometimes, especially for LH16, the same
-            %cell could have been spike sorted as a different unit letter,
-            %just because he had so many pyramidal cells that the cutting
-            %order for the interneuron would have changed, so need to do a
-            %second pass to catch and pluck those out!
 
 %first get the list of all unique rats
 for n = 1:length(list_to_select_from)
@@ -231,7 +217,7 @@ unique_ish_cells = tmp_cell_array;
     %these, and we would have kept 13a on D4 and 13a on D15 because these
     %days are actually beyond the 10-day minimum acceptable distance. 
 
-    min_accept_distance = round(min_accept_distance*.5);
+    min_accept_distance = round(min_accept_distance*.6);
 
     %first, check for cells recorded on the same tetrode, on the same
     %day--these are likely unique neurons (unless they were artificially
@@ -363,5 +349,22 @@ for i = 1:length(cleaner_tmp_array)
     unique_cells{i,3} = cleaner_tmp_array{i,5};
 
 end
+
+%use Rat struct to add the full filename to the 4th column
+for i = 1:length(unique_cells)
+
+    ratsess = split(unique_cells{i,1},'D');
+    rat = ratsess{1};
+    session = ['D',ratsess{2}];
+
+    unique_cells{i,4} = Rat.(rat).Dates.(session).file;
+    
+end
+%TODO: use this filename to load and grab the average spike waveform across
+%all four wires and save the corresponding variable in the 5th column
+%NOTE: you have to go into the lab to get the plx files for the neurons you
+%newly cut!! here's the files you need to grab spike waveforms from: 
+%LH3_11_13_12 - TETSPK09f, 49b, 85k
+%LH8_08_21_13 - TETSPK09c, 21c, 53n
 
 
