@@ -13,7 +13,9 @@ function [epoch_start_ts,epoch_end_ts,maxv,meanv,medv,minv,stdv] = find_high_vel
 [posX,posY] = NearestNeighborforMaze_LR(posX,posY);
 
 %compute the velocity for the full trial
-dist = sqrt( (diff(posX).^2) + (diff(posY).^2) );
+delta_x = diff(posX)*2.5; %2.5cm for every unit change in x
+delta_y = diff(posY)*2.5; %2.5cm for every unit change in y
+dist = sqrt( (delta_x.^2) + (delta_y.^2) );
 vraw = dist./dt;
 
 %smooth the velocity vector
@@ -52,11 +54,12 @@ end
 
 
 %visualize the spatial variables
+% [AllPosX,AllPosY] = NearestNeighborforMaze_LR(LED1_X,LED1_Y);
 % figure;plot(AllPosX,AllPosY,color=[.9 .9 .9])
 % hold on;plot(posX,posY,LineWidth=5)
-
-%visualize both velocity vectors and the corresponding head directions
-%during the run
+% 
+% %visualize both velocity vectors and the corresponding head directions
+% %during the run
 % figure;plot(pos_ts,vraw);axis tight
 % hold on;plot(pos_ts,vsm)
 % hold on;xline(pos_ts(hd_ind),'k')
@@ -153,7 +156,9 @@ else
    
     %output the raw & smoothed velocities from the selected window, the
     %corresponding pos_ts for the window, and the corresponding posx and
-    %posy -- TODO: can I get these values in cm/sec? that would be best
+    %posy -- values (hopefully) in cm/s due to distance computation at the
+    %top of this function (using the 2.5 cm x 2.5 cm figure, check this
+    %with Lara)
     vraw_window = vraw(pos_ts>=epoch_start_ts & pos_ts<=epoch_end_ts);
     vsm_window = vsm(pos_ts>=epoch_start_ts & pos_ts<=epoch_end_ts);
     posts_window = pos_ts(pos_ts>=epoch_start_ts & pos_ts<=epoch_end_ts);
