@@ -1,4 +1,5 @@
-function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,delimtetunit,min_accept_distance)
+function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,delimtetunit,...
+    min_accept_distance,waveforms_path)
 %SELECT_UNIQUE_CELLS, under the assumption that an interneuron (or other
 %cell type) can be recorded multiple consecutive days, even after turning
 %the tetrode, this function will help you narrow down the list to what are
@@ -17,7 +18,7 @@ function [unique_cells] = select_unique_cells(list_to_select_from,delimratsess,d
 %                       'TETSPK')
 %min_accept_distance,   scalar, minimum number of days between recordings 
 %                       of the same tetrode that we are willing to accept
-
+addpath(waveforms_path)
 
 %first get the list of all unique rats
 for n = 1:length(list_to_select_from)
@@ -350,6 +351,11 @@ for i = 1:length(cleaner_tmp_array)
 
 end
 
+
+%set up the list of files to sources average spike waveforms from
+wf_files = dir(waveforms_path);
+wf_files = wf_files(~ismember({wf_files.name},{'.','..'}));
+
 %use Rat struct to add the full filename to the 4th column
 for i = 1:length(unique_cells)
 
@@ -357,7 +363,13 @@ for i = 1:length(unique_cells)
     rat = ratsess{1};
     session = ['D',ratsess{2}];
 
-    unique_cells{i,4} = Rat.(rat).Dates.(session).file;
+    ratsessfile = Rat.(rat).Dates.(session).file;
+    unique_cells{i,4} = ratsessfile;
+    
+    %now grab the corresponding waveform for this rat-session-tetrode
+    current_file = [ratsessfile, '_wavelets.mat'];
+    specific_wire = ['STD',unique_cells{i,2}];
+    load(fullfile(waveforms_path,current_file),specific_wire);
     
 end
 %TODO: use this filename to load and grab the average spike waveform across
@@ -366,5 +378,7 @@ end
 %newly cut!! here's the files you need to grab spike waveforms from: 
 %LH3_11_13_12 - TETSPK09f, 49b, 85k
 %LH8_08_21_13 - TETSPK09c, 21c, 53n
+
+
 
 
