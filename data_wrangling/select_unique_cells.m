@@ -366,18 +366,46 @@ for i = 1:length(unique_cells)
     ratsessfile = Rat.(rat).Dates.(session).file;
     unique_cells{i,4} = ratsessfile;
     
-    %now grab the corresponding waveform for this rat-session-tetrode
-    current_file = [ratsessfile, '_wavelets.mat'];
-    specific_wire = ['STD',unique_cells{i,2}];
-    load(fullfile(waveforms_path,current_file),specific_wire);
+    %now grab the corresponding waveforms data for this rat-session-tetrode
+    current_file = [ratsessfile, '_wfs.mat'];
+    load(fullfile(waveforms_path,current_file));
+
+    wirenum = split(unique_cells{i,2},'K');
+    wirenum = wirenum{2}; %both wire number and unit letter
     
+    %define in case the unit naming convention is of the T[tetnum]_ ...
+    %variety
+    tetnum = (str2num(wirenum(1:2)) + 3) / 4;
+    unitletter = wirenum(end);
+
+    vars = whos;
+    wire_expression = ['^TETSPK',wirenum,'_wf(_\d)?|^T',num2str(tetnum),'_1',unitletter,'_wf(_\d)?']; 
+    wire_var_inds = regexp({vars.name},wire_expression,'match');
+    rm_ind = cellfun(@isempty,wire_var_inds);
+    wire_var_inds(rm_ind) = [];
+
+    wf_wire1 = eval(wire_var_inds{1}{1});
+    wf_wire2 = eval(wire_var_inds{2}{1});
+    wf_wire3 = eval(wire_var_inds{3}{1});
+    wf_wire4 = eval(wire_var_inds{4}{1});
+
+    avg_wf = avg_and_concat_spike_wfs(wf_wire1,wf_wire2,wf_wire3,wf_wire4);
+
+    
+    figure;plot(-eval(specific_wire))
+    title([rat, session,' ', specific_wire])
+
+    clearvars -except Rat unique_cells waveforms_path wf_files i
+
 end
-%TODO: use this filename to load and grab the average spike waveform across
-%all four wires and save the corresponding variable in the 5th column
-%NOTE: you have to go into the lab to get the plx files for the neurons you
+%TODO: you have to go into the lab to get the plx files for the neurons you
 %newly cut!! here's the files you need to grab spike waveforms from: 
 %LH3_11_13_12 - TETSPK09f, 49b, 85k
 %LH8_08_21_13 - TETSPK09c, 21c, 53n
+%update: after doing this, it was clear that I needed to do the same for
+%every other neuron in the dataset, because whatever those
+%Automaze_Waveforms files were, they were bonkers, while the true spike
+%waveforms exported from Neuroexplorer just really do look reasonable
 
 
 
