@@ -392,20 +392,22 @@ for i = 1:length(unique_cells)
     avg_wf = avg_and_concat_spike_wfs(wf_wire1,wf_wire2,wf_wire3,wf_wire4);
 
     
-    figure;plot(-eval(specific_wire))
-    title([rat, session,' ', specific_wire])
+%     figure;plot(avg_wf);
+%     title([rat, session,' ', unique_cells{i,2}])
+
+    %now add this averaged waveform per tetrode wire to unique_cells
+    unique_cells{i,5} = avg_wf;
 
     clearvars -except Rat unique_cells waveforms_path wf_files i
 
 end
-%TODO: you have to go into the lab to get the plx files for the neurons you
-%newly cut!! here's the files you need to grab spike waveforms from: 
-%LH3_11_13_12 - TETSPK09f, 49b, 85k
-%LH8_08_21_13 - TETSPK09c, 21c, 53n
-%update: after doing this, it was clear that I needed to do the same for
-%every other neuron in the dataset, because whatever those
-%Automaze_Waveforms files were, they were bonkers, while the true spike
-%waveforms exported from Neuroexplorer just really do look reasonable
+%TODO:
+%update: after doing getting the raw wfs from the files that I newly cut,
+%it was clear that I needed to do the same for every other neuron in the 
+%dataset, because whatever those Automaze_Waveforms files were, they were
+%bonkers, while the true spike waveforms exported from Neuroexplorer just
+%really do look reasonable waiting for Athena to back up all the cut .plx 
+%files that are missing!
 
 
 
