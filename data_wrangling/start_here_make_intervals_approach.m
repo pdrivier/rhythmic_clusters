@@ -30,33 +30,34 @@ clear
 close all
 dbstop if error
 
+%make sure matlab knows where you'll be pulling the raw data from
 addpath data\
 addpath lfp_data\
-addpath python_spkphase_odorsamp\
-addpath python_spkphase_approach\
-addpath python_spkphase_odorsamp_dg\
-addpath python_spkphase_odorsamp_pyrs\
-addpath python_spkphase_approach_nel\
 
-% savefileto = 'python_spkphase_approach\';
-savefileto = 'python_spkphase_approach_nel\';
-% load('Interneuron_Identities_Automaze.mat')
-load('tmp_identities.mat') %contains list that I believe are unique ints
+%set up your saving directory
+savefileto = 'python_spkphase_approach_ints\';
 
+%load the list of interneurons you'll organize data from
+load('unique_ints_by_daytetfrate.mat') 
 
 %decide ahead of time the time interval edges surrounding the event ts
 time_surr_event_dur = [0 1.5]; %this gives time for doors down relative to 
                                %the context signaling event ts
 
+Int_Identities = unique_cells; 
 
-Int_Identities = Unique_Int_Identities;
-
-
+%you'll generate two dataframes per rat-session combination: 
+%one containing LFP-based data
+%the other containing position/velocity-based data
+%they can't be combined into the same dataframe because the rows of each
+%dataframe correspond to a given time sample, and position and lfp
+%variables are sampled at different rates, so you end up with a different
+%number of rows per set of lfp/position data
 
 for i = 1:length(Int_Identities)
     sprintf('on %d out of %d',i,length(Int_Identities))
 
-    %initialize the variables that will become table columns
+    %initialize the variables for lfp-based dataframe
     rat_names = [];
     session_labels = [];
     odor_block_labels = [];
@@ -66,14 +67,8 @@ for i = 1:length(Int_Identities)
     quarter_labels = [];
 
     odor_labels = []; %keep these so you know how many trials per 
-                      %condition were available
-    pos_labels = [];
-
-    max_v = []; %intialize velocity variables
-    mean_v = [];
-    med_v = [];
-    min_v = [];
-    std_v = [];
+                      %condition were available; odor released on trial
+    pos_labels = [];  %odor port being sampled from
 
     time = [];
     lfp_approach = [];
@@ -84,9 +79,15 @@ for i = 1:length(Int_Identities)
     filtered_highgamma = [];
 
     unit_spikes = [];
-    
-    
+
     gather_len_trials = []; %this serves as a nice check
+
+    %initialize variables for position-based dataframe
+    vsm = [];%incorporate the actual velocity traces for the epoch
+    vraw = [];
+    vposts = [];
+    posx = [];%and also include where the rat is located during this time
+    posy = [];
     
     %decompose the first column of Int_Identities
     rat_expression = 'LH\d{1,2}';
@@ -202,15 +203,18 @@ for i = 1:length(Int_Identities)
         
         destination_port = pos_block01(trial);
 
-        [newst,newed,maxv,meanv,medv,minv,stdv] = find_high_velocity_epochs(pos_ts,posX,posY,epoch_duration,dt,destination_port);
+        [newst,newed,vrawwin,vsmwin,postswin,posxwin,posywin] = find_high_velocity_epochs(pos_ts,posX,posY,epoch_duration,dt,destination_port);
 
         event_ts_block01(trial,1) = newst;
         event_ts_block01(trial,2) = newed;
-        maxveloc01(trial) = maxv;
-        meanveloc01(trial) = meanv;
-        medveloc01(trial) = medv;
-        minveloc01(trial) = minv;
-        stdveloc01(trial) = stdv;
+
+        %TODO: the challenge with these new variables is their variable
+        %length on each trial...need to save them differently
+        vraw01{trial} = vrawwin;
+        vsm01{trial} = vsmwin;
+        postsveloc01{trial} = postswin;
+        posx01{trial} = posxwin;
+        posy01{trial} = posywin;
     end
 
     %all block 2
@@ -220,7 +224,7 @@ for i = 1:length(Int_Identities)
     tmp_event_ts_block02 = Intervals_by_odorblock.odorblock2.context_signaling(corrinds_block02,1);
     tmp_event_ts_block02(:,2) = corrts_block02 - 0.750;
 
-     %be a bit more generous in terms of allowed running time for trials
+    %be a bit more generous in terms of allowed running time for trials
     %where the run was very short
     short_run_trials = find(tmp_event_ts_block02(:,2) - tmp_event_ts_block02(:,1) <= 0);
     tmp_event_ts_block02(short_run_trials,2) = corrts_block02(short_run_trials,1) - 0.250;
@@ -262,15 +266,15 @@ for i = 1:length(Int_Identities)
        
         destination_port = pos_block02(trial);
 
-        [newst,newed,maxv,meanv,medv,minv,stdv] = find_high_velocity_epochs(pos_ts,posX,posY,epoch_duration,dt,destination_port);
+        [newst,newed,vrawwin,vsmwin,postswin,posxwin,posywin] = find_high_velocity_epochs(pos_ts,posX,posY,epoch_duration,dt,destination_port);
 
         event_ts_block02(trial,1) = newst;
         event_ts_block02(trial,2) = newed;
-        maxveloc02(trial) = maxv;
-        meanveloc02(trial) = meanv;
-        medveloc02(trial) = medv;
-        minveloc02(trial) = minv;
-        stdveloc02(trial) = stdv;
+        vraw02{trial} = vrawwin;
+        vsm02{trial} = vsmwin;
+        postsveloc02{trial} = postswin;
+        posx02{trial} = posxwin;
+        posy02{trial} = posywin;
 
     end
     
@@ -278,11 +282,11 @@ for i = 1:length(Int_Identities)
     event_ts = {event_ts_block01(:,1),event_ts_block02(:,1)};
     odorblock = {odors_block01,odors_block02};
     posblock = {pos_block01,pos_block02};
-    maxvblock = {maxveloc01,maxveloc02};
-    meanvblock = {meanveloc01,meanveloc02};
-    medvblock = {medveloc01,medveloc02};
-    minvblock = {minveloc01,minveloc02};
-    stdvblock = {stdveloc01,stdveloc02};
+    vrawblock = {vraw01,vraw02};
+    vsmblock = {vsm01,vsm02};
+    postsvelocblock = {postsveloc01,postsveloc02};
+    posxblock = {posx01,posx02};
+    posyblock = {posy01,posy02};
 
 
     %============================================================
@@ -490,22 +494,24 @@ for i = 1:length(Int_Identities)
             dur_spikes = timeseries_by_event(spikes,event_ts{block},time_surr_event_dur,1);
 
             %visual check
-%             figure;hold on
-%             for trial = 1:size(dur_spikes,1)
-% 
-%                plot([pre_lfp(trial,:), dur_lfp(trial,:), post_lfp(trial,:)] + trial,'k')
-%                plot([pre_theta(trial,:), dur_theta(trial,:), post_theta(trial,:)] + trial,'r')
-% 
-%             end
+            figure;hold on
+            for trial = 1:size(dur_spikes,1)
+
+               plot(dur_lfp(trial,:) + trial,'k')
+               plot(dur_theta(trial,:) + trial,'r')
+
+            end
 
             current_odors = odorblock{block};
             current_positions = posblock{block};
-            current_maxv = maxvblock{block};
-            current_meanv = meanvblock{block};
-            current_medv = medvblock{block};
-            current_minv = minvblock{block};
-            current_stdv = stdvblock{block};
 
+            %grab this odor block's position & velocity vars
+            current_vsm = vsmblock{block};
+            current_vraw = vrawblock{block};
+            current_posts = postsvelocblock{block};
+            current_posx = posxblock{block};
+            current_posy = posyblock{block};
+            
             %set up the starts of each quarter so you can save the accuracy
             %by quarter data along with the other table variables
             if block == 1
@@ -576,12 +582,12 @@ for i = 1:length(Int_Identities)
                 %set up position id labels
                 pos_labels = [pos_labels; repmat(current_positions(trial),length(trial_spikes),1)];
 
-                %set up velocity variables
-                max_v = [max_v; repmat(current_maxv(trial),length(trial_spikes),1)];
-                mean_v = [mean_v; repmat(current_meanv(trial),length(trial_spikes),1)];
-                med_v = [med_v; repmat(current_medv(trial),length(trial_spikes),1)];
-                min_v = [min_v; repmat(current_minv(trial),length(trial_spikes),1)];
-                std_v = [std_v; repmat(current_stdv(trial),length(trial_spikes),1)];
+                %set up position/veloc vars
+                vsm = [vsm; current_vsm{trial}];
+                vraw = [vraw; current_vraw{trial}];
+                vposts = [vposts; current_posts{trial}];
+                posx = [posx; current_posx{trial}];
+                posy = [posy; current_posy{trial}];
 
                 len_trial = numel(trial_labels);
                 gather_len_trials = [gather_len_trials; len_trial];
@@ -597,7 +603,7 @@ for i = 1:length(Int_Identities)
         %save day/session labels
         session_labels = repmat({session_id},length(lfp_approach),1);
     
-        %set table up 
+        %set lfp table up 
         ratsession_df = table(rat_names,time,...
             session_labels,odor_block_labels,trial_labels,trial_segment, ...
             odor_labels, pos_labels, max_v, mean_v, med_v, min_v, std_v);
@@ -651,6 +657,14 @@ for i = 1:length(Int_Identities)
         ratsession_df.quarter_labels = quarter_labels;
 
         writetable(ratsession_df,fullfile(savefileto,savename))
+
+
+        %set position/velocity table up 
+        ratpos_df = table(rat_names_poslength,vposts,...
+            session_labels_poslength,odor_block_labels_poslength,trial_labels_poslength,...
+            trial_segment_poslength, odor_labels_poslength, ...
+            pos_labels_poslength, vraw, vsm, posx, posy);
+
 
         clearvars -except Rat Int_Identities i ...
             time_surr_event_pre time_surr_event_dur time_surr_event_post ...
