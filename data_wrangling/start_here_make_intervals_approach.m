@@ -88,6 +88,8 @@ for i = 1:length(Int_Identities)
     vposts = [];
     posx = [];%and also include where the rat is located during this time
     posy = [];
+    odor_block_labels_poslength = [];
+    trial_labels_poslength = [];
     
     %decompose the first column of Int_Identities
     rat_expression = 'LH\d{1,2}';
@@ -367,8 +369,9 @@ for i = 1:length(Int_Identities)
 
     spikes = ts2binary(spikes_ts,lfp,lfp_ind,lfp_ts,1000);
 
-    %set up the name you will save the table under
+    %set up the name you will save the lfp table under
     savename = [rat_id, '_', session_id, '_approach.csv'];
+   
 
     if exist(fullfile(savefileto,savename)) ~=0 
         %if a file with this rat/session combination exists, you want to
@@ -565,16 +568,20 @@ for i = 1:length(Int_Identities)
                 unit_spikes = [unit_spikes; trial_spikes];
 
                 %set up trial_segments 
-                
                 dur = repmat({'dur'},length(dur_spikes(trial,:)),1);
                 
                 trial_segment = [trial_segment; dur];
 
+
                 %set up block labels
                 odor_block_labels = [odor_block_labels; repmat(block,length(trial_spikes),1)];
+                odor_block_labels_poslength = [odor_block_labels_poslength;...
+                    repmat(block,length(current_vsm{trial}))];
 
                 %set up trial labels 
                 trial_labels = [trial_labels; repmat(trial,length(trial_spikes),1)];
+                trial_labels_poslength = [trial_labels_poslength; ...
+                    repmat(trial,length(current_vsm{trial}))];
 
                 %set up odor id labels
                 odor_labels = [odor_labels; repmat(current_odors(trial),length(trial_spikes),1)];
@@ -660,10 +667,16 @@ for i = 1:length(Int_Identities)
 
 
         %set position/velocity table up 
+        rat_names_poslength = repmat({rat_id},length(vsm),1);
+        session_labels_poslength = repmat({session_id},length(vsm),1);
+
+
         ratpos_df = table(rat_names_poslength,vposts,...
-            session_labels_poslength,odor_block_labels_poslength,trial_labels_poslength,...
-            trial_segment_poslength, odor_labels_poslength, ...
-            pos_labels_poslength, vraw, vsm, posx, posy);
+            session_labels_poslength,odor_block_labels_poslength,...
+            trial_labels_poslength,vraw, vsm, posx, posy);
+
+        possavename = [rat_id, '_', session_id, '_posvars_approach.csv'];
+        writetable(ratpos_df,fullfile(savefileto,pos_savename))
 
 
         clearvars -except Rat Int_Identities i ...
