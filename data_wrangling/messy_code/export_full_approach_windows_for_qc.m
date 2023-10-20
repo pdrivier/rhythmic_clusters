@@ -11,7 +11,7 @@ addpath lfp_data\
 addpath figures\quality_control_approach\
 
 %set up your saving directory
-savefileto = 'python_spkphase_approach_ints\';
+savefileto = 'python_approach_qc\';
 if ~exist(savefileto,'dir') 
     mkdir(savefileto)
 end
@@ -310,26 +310,45 @@ for i = 1:length(Int_Identities)
             
             %visualize both velocity vectors and the corresponding head directions
             %during the run
-            figure;
-            subplot(211)
-            plot(pos_ts,vrawwin,color=[.9 .9 .9]);axis tight
-            hold on;plot(pos_ts,vsmwin,color='k')
-            hold on;xline(pos_ts(hd_ind),'r')
+%             figure;
+%             subplot(211)
+%             plot(pos_ts,vrawwin,color=[.9 .9 .9]);axis tight
+%             hold on;plot(pos_ts,vsmwin,color='k')
+%             hold on;xline(pos_ts(hd_ind),'r')
+%             
+%             tmp_lfp = lfp(full_time>=startts & full_time<=endts);
+%             tmp_lfp_ts = full_time(full_time>=startts & full_time<=endts);
+%     
+%             subplot(212)
+%             plot(lfp_time,lfp_snippet,color='k');axis tight
+%             
+%             title([rat_id, session_id, ' ', lfpvars{1}, ' block1 trial ',num2str(trial)])
+%     
+%             figname = [rat_id, session_id, '_', lfpvars{1}, '_block1_trial',num2str(trial),'.pdf'];
+%             saveas(figure(1),fullfile('figures/quality_control_approach/',figname))
+%     
+%             close
+
             
-            tmp_lfp = lfp(full_time>=startts & full_time<=endts);
-            tmp_lfp_ts = full_time(full_time>=startts & full_time<=endts);
-    
-            subplot(212)
-            plot(lfp_time,lfp_snippet,color='k');axis tight
-            
-            title([rat_id, session_id, ' ', lfpvars{1}, ' block1 trial ',num2str(trial)])
-    
-            figname = [rat_id, session_id, '_', lfpvars{1}, '_block1_trial',num2str(trial),'.pdf'];
-            saveas(figure(1),fullfile('figures/quality_control_approach/',figname))
-    
-            close
         end
+
     end
+
+    pos_table = table(rat_names_poslen,session_labels_poslen, ...
+        odor_block_labels_poslen, trial_labels_poslen,...
+        posx, posy, vposts, vraw, vsm, hdir, odor_port);
+    
+    possavename = [rat_id, '_', session_id, '_posvars_approach.csv'];
+    writetable(pos_table,fullfile(savefileto,possavename))
+
+    lfp_table = table(rat_names_lfplen, session_labels_lfplen, ...
+        odor_block_labels_lfplen, trial_labels_lfplen, ...
+        time, lfp_approach);
+
+    lfpsavename = [rat_id, '_', session_id, '_lfpvars_approach.csv'];
+    writetable(lfp_table,fullfile(savefileto,lfpsavename))
+
+    clearvars -except Rat Int_Identities i savefileto
 
 
 end
